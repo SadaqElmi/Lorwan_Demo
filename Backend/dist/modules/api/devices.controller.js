@@ -44,8 +44,22 @@ let DevicesController = class DevicesController {
         return { id: res.id };
     }
     async update(devEui, body) {
-        await this.chirp.updateDevice(devEui, body);
-        return { success: true };
+        try {
+            console.log("🔧 Updating device:", { devEui, body });
+            if (!/^[0-9a-fA-F]{16}$/.test(devEui)) {
+                throw new Error(`Invalid DevEUI format: ${devEui}. DevEUI must be 16 hexadecimal characters.`);
+            }
+            if (!body.name && !body.description && !body.deviceProfileId) {
+                throw new Error("At least one field (name, description, or deviceProfileId) must be provided for update.");
+            }
+            await this.chirp.updateDevice(devEui, body);
+            console.log("✅ Device updated successfully:", devEui);
+            return { success: true };
+        }
+        catch (error) {
+            console.error("❌ Error updating device:", error);
+            throw error;
+        }
     }
     async remove(devEui) {
         await this.chirp.deleteDevice(devEui);

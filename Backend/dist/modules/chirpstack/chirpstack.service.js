@@ -68,6 +68,9 @@ let ChirpstackService = class ChirpstackService {
         if (apiToken) {
             this.metadata.add("authorization", `Bearer ${apiToken}`);
         }
+        else {
+            console.warn("⚠️ No ChirpStack API token provided - some operations may fail");
+        }
     }
     async createTenant(name, meta) {
         const tenant = new tenant_pb_1.Tenant();
@@ -268,23 +271,78 @@ let ChirpstackService = class ChirpstackService {
         return res.toObject();
     }
     async updateDevice(devEui, fields) {
-        const device = new device_pb_1.Device();
-        device.setDevEui(devEui);
-        if (fields.name !== undefined)
-            device.setName(fields.name);
-        if (fields.description !== undefined)
-            device.setDescription(fields.description);
-        if (fields.deviceProfileId !== undefined)
-            device.setDeviceProfileId(fields.deviceProfileId);
-        const req = new device_pb_1.UpdateDeviceRequest();
-        req.setDevice(device);
-        await new Promise((resolve, reject) => {
-            this.deviceClient.update(req, this.metadata, (err) => {
-                if (err)
-                    return reject(err);
-                resolve();
+        try {
+            console.log("🔧 ChirpStack updateDevice called:", { devEui, fields });
+            const getReq = new device_pb_1.GetDeviceRequest();
+            getReq.setDevEui(devEui);
+            const currentDevice = await new Promise((resolve, reject) => {
+                this.deviceClient.get(getReq, this.metadata, (err, response) => {
+                    if (err) {
+                        console.error("❌ Failed to get current device:", err);
+                        return reject(new Error(`Device with DevEUI ${devEui} not found`));
+                    }
+                    resolve(response.getDevice());
+                });
             });
-        });
+            console.log("🔧 Current device info:", {
+                devEui: currentDevice.getDevEui(),
+                name: currentDevice.getName(),
+                applicationId: currentDevice.getApplicationId(),
+                deviceProfileId: currentDevice.getDeviceProfileId(),
+            });
+            const device = new device_pb_1.Device();
+            device.setDevEui(devEui);
+            device.setApplicationId(currentDevice.getApplicationId());
+            if (fields.name !== undefined) {
+                device.setName(fields.name);
+            }
+            else {
+                device.setName(currentDevice.getName());
+            }
+            if (fields.description !== undefined) {
+                device.setDescription(fields.description);
+            }
+            else if (currentDevice.getDescription()) {
+                device.setDescription(currentDevice.getDescription());
+            }
+            if (fields.deviceProfileId !== undefined) {
+                device.setDeviceProfileId(fields.deviceProfileId);
+            }
+            else if (currentDevice.getDeviceProfileId()) {
+                device.setDeviceProfileId(currentDevice.getDeviceProfileId());
+            }
+            const req = new device_pb_1.UpdateDeviceRequest();
+            req.setDevice(device);
+            console.log("🔧 Sending update request to ChirpStack...");
+            await new Promise((resolve, reject) => {
+                this.deviceClient.update(req, this.metadata, (err) => {
+                    if (err) {
+                        console.error("❌ ChirpStack update error:", {
+                            code: err.code,
+                            details: err.details,
+                            message: err.message,
+                            metadata: err.metadata,
+                        });
+                        if (err.code === 16) {
+                            return reject(new Error("ChirpStack authentication failed. Please check API token configuration."));
+                        }
+                        else if (err.code === 5) {
+                            return reject(new Error(`Device with DevEUI ${devEui} not found`));
+                        }
+                        else if (err.code === 3) {
+                            return reject(new Error(`Invalid device data: ${err.details}`));
+                        }
+                        return reject(new Error(`ChirpStack API error: ${err.message}`));
+                    }
+                    console.log("✅ ChirpStack device updated successfully");
+                    resolve();
+                });
+            });
+        }
+        catch (error) {
+            console.error("❌ Error in updateDevice:", error);
+            throw error;
+        }
     }
     async deleteDevice(devEui) {
         const req = new device_pb_1.DeleteDeviceRequest();

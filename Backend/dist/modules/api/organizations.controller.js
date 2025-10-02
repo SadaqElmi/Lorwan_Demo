@@ -17,7 +17,6 @@ const common_1 = require("@nestjs/common");
 const passport_1 = require("@nestjs/passport");
 const chirpstack_service_1 = require("../chirpstack/chirpstack.service");
 const auth_service_1 = require("../auth/auth.service");
-const organization_access_guard_1 = require("../auth/guards/organization-access.guard");
 const nest_keycloak_connect_1 = require("nest-keycloak-connect");
 let OrganizationsController = class OrganizationsController {
     constructor(chirp, authService) {
@@ -115,7 +114,7 @@ __decorate([
 ], OrganizationsController.prototype, "create", null);
 __decorate([
     (0, common_1.Put)(":id"),
-    (0, common_1.UseGuards)(organization_access_guard_1.OrganizationAccessGuard),
+    (0, nest_keycloak_connect_1.Roles)({ roles: ["admin_role"] }),
     __param(0, (0, common_1.Param)("id")),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),

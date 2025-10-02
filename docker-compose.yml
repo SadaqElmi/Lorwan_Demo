@@ -140,7 +140,7 @@ services:
       - MONGODB_URL=mongodb://admin:password@mongodb:27017/chirpstack_backend?authSource=admin
       - MQTT_BROKER_URL=mqtt://mosquitto:1883
       - CHIRPSTACK_SERVER=chirpstack:8080
-      - CHIRPSTACK_API_TOKEN=
+      - CHIRPSTACK_API_TOKEN=dev-token-12345
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:9090
       - KEYCLOAK_REALM=lorawan
       - KEYCLOAK_CLIENT_ID=lorawan-backend

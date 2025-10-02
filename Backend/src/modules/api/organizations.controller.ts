@@ -127,7 +127,7 @@ export class OrganizationsController {
   }
 
   @Put(":id")
-  @UseGuards(OrganizationAccessGuard)
+  @Roles({ roles: ["admin_role"] })
   async update(
     @Param("id") id: string,
     @Body() body: { name?: string; description?: string }
